@@ -439,12 +439,19 @@ class DefaultModelLoader(BaseModelLoader):
         device_config: DeviceConfig,
     ) -> nn.Module:
         target_device = torch.device(device_config.device)
-        with set_default_torch_dtype(model_config.dtype):
+        if model_config.hf_config.model_type in ("parrot_audio", "parrot2_audio", "parrot2_audio_moe"):
             with target_device:
                 model = _initialize_model(
                     model_config,
                     self.load_config,
                 )
+        else:
+            with set_default_torch_dtype(model_config.dtype):
+                with target_device:
+                    model = _initialize_model(
+                        model_config,
+                        self.load_config,
+                    )
 
         self.load_weights_and_postprocess(
             model, self._get_all_weights(model_config, model), target_device
