@@ -1,0 +1,27 @@
+FROM lmsysorg/sglang:v0.4.10.post2-cu126
+
+# add transformers parrot audio support
+COPY dist/transformers-4.54.1.tar.gz /tmp/transformers-4.54.1.tar.gz
+RUN pip uninstall transformers -y && pip install /tmp/transformers-4.54.1.tar.gz --no-deps && rm -rf /tmp/transformers-4.54.1.tar.gz
+
+
+# add parrot commons support
+COPY dist/parrot_commons-0.1.0.tar.gz /tmp/parrot_commons-0.1.0.tar.gz
+RUN pip install /tmp/parrot_commons-0.1.0.tar.gz --no-deps && rm -rf /tmp/parrot_commons-0.1.0.tar.gz
+
+
+# add parrot audio support
+COPY python/sglang/srt/model_loader/loader.py /sgl-workspace/sglang/python/sglang/srt/model_loader/loader.py
+
+COPY python/sglang/srt/models/parrot_audio.py /sgl-workspace/sglang/python/sglang/srt/models/parrot_audio.py
+COPY python/sglang/srt/models/parrot2_audio.py /sgl-workspace/sglang/python/sglang/srt/models/parrot2_audio.py
+COPY python/sglang/srt/models/parrot2_audio_moe.py /sgl-workspace/sglang/python/sglang/srt/models/parrot2_audio_moe.py
+
+COPY python/sglang/srt/multimodal/processors/parrot_audio.py /sgl-workspace/sglang/python/sglang/srt/multimodal/processors/parrot_audio.py
+COPY python/sglang/srt/multimodal/processors/parrot2_audio.py /sgl-workspace/sglang/python/sglang/srt/multimodal/processors/parrot2_audio.py
+COPY python/sglang/srt/multimodal/processors/parrot2_audio_moe.py /sgl-workspace/sglang/python/sglang/srt/multimodal/processors/parrot2_audio_moe.py
+
+COPY python/sglang/srt/multimodal/processors/base_processor.py /sgl-workspace/sglang/python/sglang/srt/multimodal/processors/base_processor.py
+
+# setup entrypoint
+ENTRYPOINT ["python3", "-m", "sglang.launch_server"]
