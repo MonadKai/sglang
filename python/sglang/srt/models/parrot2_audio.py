@@ -25,7 +25,7 @@
 import logging
 import math
 from functools import lru_cache, partial
-from typing import Any, Iterable, List, Optional, Tuple, Type, TypedDict
+from typing import Any, Iterable, List, Optional, Tuple, Type, TypedDict, Dict, Callable
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -49,7 +49,7 @@ from sglang.srt.layers.utils import get_layer_id
 from sglang.srt.layers.vocab_parallel_embedding import ParallelLMHead
 from sglang.srt.managers.mm_utils import (
     MultiModalityDataPaddingPatternMultimodalTokens,
-    general_mm_embed_routine,
+    embed_mm_inputs,
 )
 from sglang.srt.managers.schedule_batch import Modality, MultimodalDataItem, MultimodalInputs
 from sglang.srt.model_executor.forward_batch_info import ForwardBatch
@@ -58,6 +58,76 @@ from sglang.srt.models.qwen3 import Qwen3ForCausalLM
 from sglang.srt.utils import add_prefix
 
 logger = logging.getLogger(__name__)
+
+
+def general_mm_embed_routine(
+    input_ids: torch.Tensor,
+    forward_batch: ForwardBatch,
+    language_model: nn.Module,
+    multimodal_model: Optional[nn.Module] = None,
+    data_embedding_funcs: Dict[
+        Modality, Callable[[List[MultimodalDataItem]], torch.Tensor]
+    ] = None,
+    placeholder_tokens: Optional[dict[Modality, List[int]]] = None,
+    **kwargs,
+) -> torch.Tensor:
+    """
+    Process multimodal inputs and forward through language model.
+
+    Args:
+        input_ids: Input token IDs tensor
+        forward_batch: Batch information for model forward pass
+        language_model: Base language model to use
+        image_data_embedding_func: Function to embed image data
+        audio_data_embedding_func: Function to embed audio data
+        placeholder_tokens: Token IDs for multimodal placeholders
+        **kwargs: Additional arguments passed to language model
+
+    Returns:
+        Hidden states from language model forward pass
+    """
+    assert hasattr(language_model, "get_input_embeddings")
+    embed_tokens = language_model.model.get_input_embeddings()
+    if (
+        not forward_batch.forward_mode.is_decode()
+        and forward_batch.contains_mm_inputs()
+    ):
+        mm_inputs_list = [
+            mm_input for mm_input in forward_batch.mm_inputs if mm_input is not None
+        ]
+        extend_prefix_lens = [
+            prefix_len
+            for i, prefix_len in enumerate(forward_batch.extend_prefix_lens_cpu)
+            if forward_batch.mm_inputs[i] is not None
+        ]
+        extend_seq_lens = [
+            seq_len
+            for i, seq_len in enumerate(forward_batch.extend_seq_lens_cpu)
+            if forward_batch.mm_inputs[i] is not None
+        ]
+        inputs_embeds = embed_mm_inputs(
+            mm_inputs_list=mm_inputs_list,
+            extend_prefix_lens=extend_prefix_lens,
+            extend_seq_lens=extend_seq_lens,
+            input_ids=input_ids,
+            input_embedding=embed_tokens,
+            multimodal_model=multimodal_model,
+            data_embedding_func_mapping=data_embedding_funcs,
+            placeholder_tokens=placeholder_tokens,
+        )
+        # once used, mm_inputs is useless, considering chunked-prefill is disabled for multimodal models
+        # just being defensive here
+        forward_batch.mm_inputs = None
+    else:
+        inputs_embeds = embed_tokens(input_ids)
+
+    hidden_states = language_model(
+        input_ids=None,
+        forward_batch=forward_batch,
+        input_embeds=inputs_embeds,
+        **kwargs,
+    )
+    return hidden_states
 
 
 class Parrot2AudioForConditionalGeneration(nn.Module):
