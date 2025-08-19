@@ -32,7 +32,7 @@ import torch.nn.functional as F
 from einops import rearrange
 from transformers import AutoTokenizer, Qwen3Config
 from transformers.activations import ACT2FN
-from transformers.models.parrot_audio.configuration_parrot_audio import ParrotAudioConfig
+from transformers.models.parrot2_audio.configuration_parrot2_audio import Parrot2AudioConfig
 from transformers.models.parrot_sensevoice.configuration_parrot_sensevoice import ParrotSenseVoiceConfig
 from transformers.models.parrot_sensevoice.modeling_parrot_sensevoice import ParrotSenseVoiceEncoder
 from transformers.models.parrot2_audio.modeling_parrot2_audio import Parrot2AudioMultiModalProjector
@@ -152,7 +152,7 @@ class Parrot2AudioForConditionalGeneration(nn.Module):
 
     def __init__(
         self,
-        config: ParrotAudioConfig,
+        config: Parrot2AudioConfig,
         quant_config: Optional[QuantizationConfig] = None,
         prefix: str = "",
     ) -> None:
