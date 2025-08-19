@@ -220,6 +220,9 @@ class BaseMultimodalProcessor(ABC):
             if self.arch in {
                 "Gemma3nForConditionalGeneration",
                 "Qwen2AudioForConditionalGeneration",
+                "ParrotAudioForConditionalGeneration",
+                "Parrot2AudioForConditionalGeneration",
+                "Parrot2AudioMoeForConditionalGeneration",
             }:
                 # Note(Xinyuan): for gemma3n, ref: https://github.com/huggingface/transformers/blob/ccf2ca162e33f381e454cdb74bf4b41a51ab976d/src/transformers/models/gemma3n/processing_gemma3n.py#L107
                 kwargs["audio"] = audios
