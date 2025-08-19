@@ -1,7 +1,7 @@
 # coding=utf-8
 # Adapted from
-# https://github.com/huggingface/transformers/blob/1d45d90e5d1552eccb6d8cc9b7bba283ccefb808/src/transformers/models/qwen2_audio/modeling_qwen2_audio.py
-# Copyright 2024 The Qwen team.
+# https://github.com/MonadKai/transformers/tree/v4.55.0-bairong/src/transformers/models/parrot_audio/modeling_parrot_audio.py
+# Copyright 2025 The bairong-inc team.
 # Copyright 2023 The vLLM team.
 # Copyright 2022 EleutherAI and the HuggingFace Inc. team. All rights reserved.
 #
@@ -21,12 +21,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Inference-only Qwen2-Audio model compatible with HuggingFace weights."""
+"""Inference-only Parrot-Audio model compatible with HuggingFace weights."""
 import logging
 import math
 from functools import lru_cache, partial
 from typing import Any, Iterable, List, Optional, Tuple, Type, TypedDict
-from sglang.srt.managers.schedule_batch import Modality
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -52,7 +51,7 @@ from sglang.srt.managers.mm_utils import (
     MultiModalityDataPaddingPatternMultimodalTokens,
     general_mm_embed_routine,
 )
-from sglang.srt.managers.schedule_batch import MultimodalDataItem, MultimodalInputs
+from sglang.srt.managers.schedule_batch import Modality, MultimodalDataItem, MultimodalInputs
 from sglang.srt.model_executor.forward_batch_info import ForwardBatch
 from sglang.srt.model_loader.weight_utils import default_weight_loader
 from sglang.srt.models.qwen2 import Qwen2ForCausalLM
@@ -150,7 +149,9 @@ class ParrotAudioForConditionalGeneration(nn.Module):
             forward_batch=forward_batch,
             language_model=self.language_model,
             multimodal_model=self,
-            data_embedding_funcs={Modality.AUDIO: self.get_audio_feature},
+            data_embedding_funcs={
+                Modality.AUDIO: self.get_audio_feature
+            },
             positions=positions,
         )
 
