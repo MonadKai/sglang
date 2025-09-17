@@ -1,0 +1,8 @@
+FROM lmsysorg/sglang:v0.5.2-cu126
+
+COPY python/sglang/srt/hf_transformers_utils.py /sgl-workspace/sglang/python/sglang/srt/hf_transformers_utils.py
+COPY python/sglang/srt/configs/model_config.py /sgl-workspace/sglang/python/sglang/srt/configs/model_config.py
+COPY python/sglang/srt/configs/points_v15_chat.py /sgl-workspace/sglang/python/sglang/srt/configs/points_v15_chat.py
+COPY python/sglang/srt/models/points_v15_chat.py /sgl-workspace/sglang/python/sglang/srt/models/points_v15_chat.py
+COPY python/sglang/srt/multimodal/processors/points_v15_chat.py /sgl-workspace/sglang/python/sglang/srt/multimodal/processors/points_v15_chat.py
+COPY python/sglang/srt/parser/conversation.py /sgl-workspace/sglang/python/sglang/srt/parser/conversation.py
