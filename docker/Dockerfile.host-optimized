@@ -1,0 +1,5 @@
+FROM lmsysorg/sglang:v0.5.5.post3
+
+COPY python/sglang/srt/server_args.py /sgl-workspace/sglang/python/sglang/srt/server_args.py
+
+CMD ["/bin/bash"]
