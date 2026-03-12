@@ -60,7 +60,6 @@ from sglang.srt.layers.linear import (
 from sglang.srt.layers.moe.fused_moe_triton.layer import FusedMoE
 from sglang.srt.layers.quantization.base_config import QuantizationConfig
 from sglang.srt.layers.radix_attention import RadixAttention
-from sglang.srt.layers.radix_linear_attention import RadixLinearAttention
 from sglang.srt.layers.rotary_embedding import get_rope
 from sglang.srt.layers.vocab_parallel_embedding import VocabParallelEmbedding
 from sglang.srt.model_executor.cuda_graph_runner import get_is_capture_mode
@@ -196,25 +195,6 @@ class Qwen3_5GatedDeltaNet(nn.Module):
         set_weight_attrs(self.A_log, {"weight_loader": sharded_weight_loader(0)})
         set_weight_attrs(self.dt_bias, {"weight_loader": sharded_weight_loader(0)})
 
-        conv_weights = self.conv1d.weight.view(
-            self.conv1d.weight.size(0), self.conv1d.weight.size(2)
-        )
-        # RadixLinearAttention layer
-        self.attn = RadixLinearAttention(
-            layer_id=layer_id,
-            num_q_heads=self.num_k_heads // self.attn_tp_size,
-            num_k_heads=self.num_k_heads // self.attn_tp_size,
-            num_v_heads=self.num_v_heads // self.attn_tp_size,
-            head_q_dim=self.head_k_dim,
-            head_k_dim=self.head_k_dim,
-            head_v_dim=self.head_v_dim,
-            conv_weights=conv_weights,
-            bias=self.conv1d.bias,
-            activation=self.activation,
-            A_log=self.A_log,
-            dt_bias=self.dt_bias,
-        )
-
         # Normalization layer
         self.norm = RMSNormGated(
             self.head_v_dim,
@@ -273,7 +253,7 @@ class Qwen3_5GatedDeltaNet(nn.Module):
         """
         Forward pass with three parts:
         1. Input projection
-        2. Core attention (custom op)
+        2. Core attention (custom op) — call HybridLinearAttnBackend with (q, k, v, ...)
         3. Output projection
         """
         seq_len, _ = hidden_states.shape
@@ -287,11 +267,47 @@ class Qwen3_5GatedDeltaNet(nn.Module):
         b = b.contiguous()
         a = a.contiguous()
 
-        core_attn_out = self.attn.forward(
-            forward_batch=forward_batch,
-            mixed_qkv=mixed_qkv,
-            a=a,
-            b=b,
+        # HybridLinearAttnBackend.forward(q, k, v, layer, forward_batch, ...) expects
+        # q, k, v; split mixed_qkv and pass full kwargs as in qwen3_next.
+        key_split_dim = self.key_dim // self.attn_tp_size
+        value_split_dim = self.value_dim // self.attn_tp_size
+        q, k, v = torch.split(
+            mixed_qkv,
+            [key_split_dim, key_split_dim, value_split_dim],
+            dim=-1,
+        )
+        conv_weights = self.conv1d.weight.view(
+            self.conv1d.weight.size(0), self.conv1d.weight.size(2)
+        )
+        backend_kwargs = {
+            "mixed_qkv": mixed_qkv,
+            "conv_weights": conv_weights,
+            "bias": self.conv1d.bias,
+            "activation": self.activation,
+            "key_dim": self.key_dim,
+            "value_dim": self.value_dim,
+            "attention_tp_size": self.attn_tp_size,
+            "head_k_dim": self.head_k_dim,
+            "head_v_dim": self.head_v_dim,
+            "a": a,
+            "b": b,
+            "A_log": self.A_log,
+            "dt_bias": self.dt_bias,
+            "layer_id": self.layer_id,
+            "seq_len": seq_len,
+            "num_k_heads": self.num_k_heads,
+            "num_v_heads": self.num_v_heads,
+            "z": z,
+        }
+        # Pass layer=None; backend uses kwargs["layer_id"] and kwargs["z"] (same as qwen3_next).
+        core_attn_out = forward_batch.attn_backend.forward(
+            q,
+            k,
+            v,
+            None,
+            forward_batch,
+            save_kv_cache=True,
+            **backend_kwargs,
         )
 
         z_shape_og = z.shape
