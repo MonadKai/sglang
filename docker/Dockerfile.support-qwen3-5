@@ -8,7 +8,6 @@ COPY python/sglang/srt/configs/model_config.py ${SGLANG_PATH}/srt/configs/model_
 COPY python/sglang/srt/configs/__init__.py ${SGLANG_PATH}/srt/configs/__init__.py
 COPY python/sglang/srt/utils/hf_transformers_utils.py ${SGLANG_PATH}/srt/utils/hf_transformers_utils.py
 
-COPY python/sglang/srt/layers/radix_linear_attention.py ${SGLANG_PATH}/srt/layers/radix_linear_attention.py
 COPY python/sglang/srt/compilation/compilation_config.py ${SGLANG_PATH}/srt/compilation/compilation_config.py
 COPY python/sglang/srt/models/qwen3_5.py ${SGLANG_PATH}/srt/models/qwen3_5.py
 COPY python/sglang/srt/models/qwen3_5_mtp.py ${SGLANG_PATH}/srt/models/qwen3_5_mtp.py
