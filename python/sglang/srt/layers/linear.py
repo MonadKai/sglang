@@ -743,7 +743,7 @@ class MergedColumnParallelLinear(ColumnParallelLinear):
                 )
 
             loaded_weight_shard = loaded_weight.narrow(
-                output_dim, shard_offset, shard_size
+                param.output_dim, shard_offset, shard_size
             )
             self.weight_loader_v2(param, loaded_weight_shard, shard_id)
 
