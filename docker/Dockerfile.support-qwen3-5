@@ -1,4 +1,4 @@
-FROM lmsysorg/sglang:v0.5.9
+FROM lmsysorg/sglang:v0.5.7
 
 ARG SGLANG_PATH="/sgl-workspace/sglang/python/sglang"
 
