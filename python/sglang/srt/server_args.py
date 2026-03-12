@@ -1373,7 +1373,11 @@ class ServerArgs:
                         "Use flashinfer_trtllm as MoE runner backend on sm100 for "
                         f"{model_arch}"
                     )
-        elif model_arch in ["Qwen3NextForCausalLM"]:
+        elif model_arch in [
+            "Qwen3NextForCausalLM",
+            "Qwen3_5ForConditionalGeneration",
+            "Qwen3_5MoeForConditionalGeneration",
+        ]:
             if is_sm100_supported():
                 quantization_config = getattr(hf_config, "quantization_config", None)
                 quant_method = (
