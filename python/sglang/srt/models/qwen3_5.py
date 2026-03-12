@@ -1025,25 +1025,6 @@ class Qwen3_5MoeForCausalLM(Qwen3_5ForCausalLM):
 
                     if name in params_dict.keys():
                         param = params_dict[name]
-                        # FP8 block-quantized checkpoints may store weight in 3D;
-                        # reshape to 2D expected by MergedColumnParallelLinear.
-                        if loaded_weight.dim() == 3 and param.data.dim() == 2:
-                            total_out, in_size = param.data.shape[0], param.data.shape[1]
-                            s0, s1, s2 = (
-                                loaded_weight.shape[0],
-                                loaded_weight.shape[1],
-                                loaded_weight.shape[2],
-                            )
-                            if s0 * s1 == total_out and s2 == in_size:
-                                loaded_weight = loaded_weight.reshape(s0 * s1, s2)
-                            elif s0 * s2 == total_out and s1 == in_size:
-                                loaded_weight = loaded_weight.permute(0, 2, 1).reshape(
-                                    s0 * s2, s1
-                                )
-                            elif s1 * s2 == total_out and s0 == in_size:
-                                loaded_weight = loaded_weight.permute(1, 2, 0).reshape(
-                                    s1 * s2, s0
-                                )
                         weight_loader = getattr(
                             param, "weight_loader", default_weight_loader
                         )
@@ -1357,25 +1338,6 @@ class Qwen3_5MoeForConditionalGeneration(Qwen3VLForConditionalGeneration):
 
                     if name in params_dict.keys():
                         param = params_dict[name]
-                        # FP8 block-quantized checkpoints may store weight in 3D;
-                        # reshape to 2D expected by MergedColumnParallelLinear.
-                        if loaded_weight.dim() == 3 and param.data.dim() == 2:
-                            total_out, in_size = param.data.shape[0], param.data.shape[1]
-                            s0, s1, s2 = (
-                                loaded_weight.shape[0],
-                                loaded_weight.shape[1],
-                                loaded_weight.shape[2],
-                            )
-                            if s0 * s1 == total_out and s2 == in_size:
-                                loaded_weight = loaded_weight.reshape(s0 * s1, s2)
-                            elif s0 * s2 == total_out and s1 == in_size:
-                                loaded_weight = loaded_weight.permute(0, 2, 1).reshape(
-                                    s0 * s2, s1
-                                )
-                            elif s1 * s2 == total_out and s0 == in_size:
-                                loaded_weight = loaded_weight.permute(1, 2, 0).reshape(
-                                    s1 * s2, s0
-                                )
                         weight_loader = getattr(
                             param, "weight_loader", default_weight_loader
                         )

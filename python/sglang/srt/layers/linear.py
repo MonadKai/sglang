@@ -698,31 +698,6 @@ class MergedColumnParallelLinear(ColumnParallelLinear):
         An example of a model with these fused layers:
         https://huggingface.co/microsoft/Phi-3-mini-4k-instruct
         """
-        total_output_size = sum(self.output_sizes)
-
-        # FP8 block-quantized checkpoints may store weight as
-        # [num_output_blocks, block_n, in_features] instead of
-        # [total_output_size, in_features]. Reshape to 2D when the first
-        # two dimensions multiply to total_output_size.
-        if (
-            loaded_weight.dim() == 3
-            and loaded_weight.shape[0] * loaded_weight.shape[1] == total_output_size
-        ):
-            loaded_weight = loaded_weight.reshape(
-                loaded_weight.shape[0] * loaded_weight.shape[1],
-                loaded_weight.shape[2],
-            )
-
-        output_dim = param.output_dim
-        loaded_output_size = loaded_weight.shape[output_dim]
-        if loaded_output_size < total_output_size:
-            raise RuntimeError(
-                f"MergedColumnParallelLinear weight shape mismatch: checkpoint has "
-                f"{loaded_output_size} along output dim but model expects "
-                f"total output size {total_output_size} (output_sizes={self.output_sizes}). "
-                f"Ensure the model config (e.g. linear_num_key_heads, linear_key_head_dim "
-                f"for Qwen3.5 linear attention) matches the checkpoint."
-            )
 
         current_shard_offset = 0
         shard_offsets: List[Tuple[int, int, int]] = []
