@@ -1,0 +1,20 @@
+FROM lmsysorg/sglang:v0.5.9
+
+ARG SGLANG_PATH="/sgl-workspace/sglang/python/sglang"
+
+
+COPY python/sglang/srt/configs/qwen3_5.py ${SGLANG_PATH}/srt/configs/qwen3_5.py
+COPY python/sglang/srt/configs/model_config.py ${SGLANG_PATH}/srt/configs/model_config.py
+COPY python/sglang/srt/configs/__init__.py ${SGLANG_PATH}/srt/configs/__init__.py
+COPY pytohn/sglang/srt/utils/hf_transformers_utils.py ${SGLANG_PATH}/srt/utils/hf_transformers_utils.py
+
+COPY python/sglang/srt/layers/radix_linear_attention.py ${SGLANG_PATH}/srt/layers/radix_linear_attention.py
+COPY python/sglang/srt/compilation/compilation_config.py ${SGLANG_PATH}/srt/compilation/compilation_config.py
+COPY python/sglang/srt/models/qwen3_5.py ${SGLANG_PATH}/srt/models/qwen3_5.py
+COPY python/sglang/srt/models/qwen3_5_mtp.py ${SGLANG_PATH}/srt/models/qwen3_5_mtp.py
+COPY python/sglang/srt/multimodal/processors/qwen_vl.py ${SGLANG_PATH}/srt/multimodal/processors/qwen_vl.py
+
+COPY python/sglang/srt/model_executor/model_runner.py ${SGLANG_PATH}/srt/model_executor/model_runner.py
+COPY python/sglang/srt/server_args.py ${SGLANG_PATH}/srt/server_args.py
+
+CMD ["/bin/bash"]
