@@ -19,6 +19,7 @@ class CompilationConfig:
             "sglang.unified_attention_with_output",
             "sglang.gdn_with_output",
             "sglang.inplace_all_reduce",
+            "sglang.unified_linear_attention_with_output",
         ]
 
     def add_split_op(self, op: str):
