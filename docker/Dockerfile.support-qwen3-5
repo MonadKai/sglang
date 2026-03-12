@@ -14,6 +14,7 @@ COPY python/sglang/srt/models/qwen3_5.py ${SGLANG_PATH}/srt/models/qwen3_5.py
 COPY python/sglang/srt/models/qwen3_5_mtp.py ${SGLANG_PATH}/srt/models/qwen3_5_mtp.py
 COPY python/sglang/srt/multimodal/processors/qwen_vl.py ${SGLANG_PATH}/srt/multimodal/processors/qwen_vl.py
 
+COPY python/sglang/srt/model_executor/model_runner_kv_cache_mixin.py ${SGLANG_PATH}/srt/model_executor/model_runner_kv_cache_mixin.py
 COPY python/sglang/srt/model_executor/model_runner.py ${SGLANG_PATH}/srt/model_executor/model_runner.py
 COPY python/sglang/srt/server_args.py ${SGLANG_PATH}/srt/server_args.py
 

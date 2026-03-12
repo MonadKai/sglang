@@ -1470,15 +1470,15 @@ class ModelRunner(ModelRunnerKVCacheMixin):
 
     @property
     def hybrid_gdn_config(self):
+        # For compound configs (Qwen3.5, JetVLM, etc.), return text_config so that
+        # full_attention_layer_ids and mamba2_cache_params are available (v0.5.9 style).
         config = self.model_config.hf_config
         if isinstance(
-            config, 
-            Qwen3NextConfig
-            | Qwen3_5Config
-            | Qwen3_5MoeConfig
-            | JetNemotronConfig
-            | JetVLMConfig
+            config,
+            Qwen3_5Config | Qwen3_5MoeConfig | JetNemotronConfig | JetVLMConfig,
         ):
+            return self.model_config.hf_text_config
+        if isinstance(config, Qwen3NextConfig):
             return config
         return None
 
