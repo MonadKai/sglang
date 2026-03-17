@@ -859,8 +859,11 @@ class OpenAIServingChat(OpenAIServingBase):
         except ValueError as e:
             error = self.create_streaming_error_response(str(e))
             yield f"data: {error}\n\n"
-
-        yield "data: [DONE]\n\n"
+        finally:
+            # Always send [DONE] so chunked transfer encoding is properly terminated.
+            # Otherwise clients (e.g. aiohttp in evalscope) may raise
+            # TransferEncodingError: Not enough data to satisfy transfer length header.
+            yield "data: [DONE]\n\n"
 
     async def _handle_non_streaming_request(
         self,
