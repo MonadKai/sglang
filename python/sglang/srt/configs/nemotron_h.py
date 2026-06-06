@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 # Copyright 2025 SGLang Team
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +16,9 @@
 # Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/transformers_utils/configs/nemotron_h.py
 
 """NemotronH model configuration"""
+
+import copy
+from typing import Any
 
 from transformers.configuration_utils import PretrainedConfig
 from transformers.utils import logging
@@ -32,6 +37,7 @@ MLP = "-"
 MOE = "E"
 DEFAULT_LAYERS_BLOCK_TYPE = ["mamba", "moe", "attention", "moe"]
 DEFAULT_MTP_LAYERS_BLOCK_TYPE = ["attention", "moe"]
+DEFAULT_MAMBA_CHUNK_SIZE = 256
 
 
 class NemotronHConfig(PretrainedConfig):
@@ -213,8 +219,31 @@ class NemotronHConfig(PretrainedConfig):
                 mtp_layers_block_type = NemotronHConfig._pattern_to_list(pattern)
         return mtp_layers_block_type
 
+    @staticmethod
+    def _resolve_mamba_chunk_size(mamba_chunk_size, kwargs) -> int:
+        """Resolve canonical mamba_chunk_size from new and legacy config fields."""
+        chunk_size = kwargs.pop("chunk_size", None)
+        if (
+            mamba_chunk_size is not None
+            and chunk_size is not None
+            and mamba_chunk_size != chunk_size
+        ):
+            logger.warning(
+                "Both chunk_size=%s and mamba_chunk_size=%s were provided. "
+                "Using mamba_chunk_size.",
+                chunk_size,
+                mamba_chunk_size,
+            )
+
+        if mamba_chunk_size is None:
+            mamba_chunk_size = chunk_size
+        if mamba_chunk_size is None:
+            mamba_chunk_size = DEFAULT_MAMBA_CHUNK_SIZE
+        return mamba_chunk_size
+
     def __init__(
         self,
+        *,
         vocab_size=131072,
         tie_word_embeddings=False,
         hidden_size=4096,
@@ -255,7 +284,7 @@ class NemotronHConfig(PretrainedConfig):
         mamba_dt_init_floor=1e-4,
         mamba_conv_bias=True,
         mamba_proj_bias=False,
-        mamba_chunk_size=256,
+        mamba_chunk_size=None,
         rescale_prenorm_residual=True,
         n_routed_experts=8,
         n_shared_experts=1,
@@ -271,6 +300,8 @@ class NemotronHConfig(PretrainedConfig):
         mtp_layers_block_type=DEFAULT_MTP_LAYERS_BLOCK_TYPE,
         **kwargs,
     ):
+        mamba_chunk_size = self._resolve_mamba_chunk_size(mamba_chunk_size, kwargs)
+
         # Compatibility parsing: normalize legacy pattern fields into canonical list fields.
         layers_block_type = self._resolve_layers_block_type(
             layers_block_type, hybrid_override_pattern, kwargs
@@ -477,3 +508,52 @@ class NemotronHConfig(PretrainedConfig):
             MLP: "mlp",
         }
         return [pattern_mapping[char] for char in pattern]
+
+    def get_nemotron_h_config_for_layer(self, layer_idx: int) -> "NemotronHConfig":
+        return self
+
+    def get_mtp_config(self) -> "NemotronHConfig":
+        return self
+
+    @property
+    def max_n_routed_experts(self) -> int:
+        return self.n_routed_experts
+
+
+class NemotronHPuzzleConfig(NemotronHConfig):
+    model_type = "nemotron_h_puzzle"
+    has_no_defaults_at_init = True
+
+    def __init__(
+        self,
+        *,
+        block_configs: list[dict[str, Any]],
+        mtp_block_configs: list[dict[str, Any]] | None = None,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.block_configs = block_configs
+        self.mtp_block_configs = mtp_block_configs
+
+    def get_nemotron_h_config_for_layer(self, layer_idx: int) -> NemotronHConfig:
+        layer_config = copy.copy(self)
+        for key, value in self.block_configs[layer_idx].items():
+            setattr(layer_config, key, value)
+        return layer_config
+
+    def get_mtp_config(self) -> NemotronHConfig:
+        assert self.mtp_block_configs
+        mtp_config = copy.copy(self)
+        mtp_config.block_configs = self.mtp_block_configs
+        return mtp_config
+
+    @property
+    def max_n_routed_experts(self) -> int:
+        block_n_routed_experts = [
+            block["n_routed_experts"]
+            for block in self.block_configs
+            if block["block_type"] == "moe"
+        ]
+        max_experts = max(block_n_routed_experts)
+        assert max_experts > 0
+        return max_experts
